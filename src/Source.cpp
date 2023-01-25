@@ -12,7 +12,7 @@
 #include "../header/shader_m.h"
 #include "../header/camera.h"
 #include "../header/model.h"
-
+#include "../header/fogGrid.h"
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -101,38 +101,42 @@ int main()
 
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 
-    glm::vec3 min(-1, -1, -1);
-    glm::vec3 max(1, 1, 1);
-    glm::vec3 num(2, 2, 2);
-    fogShader.use();
-    fogShader.setVec3("fogBox.min", min);
-    fogShader.setVec3("fogBox.max", max);
-    fogShader.setVec3("fogBox.num", num);
-    fogShader.setVec3("fogBox.step", glm::abs(max - min) / num);
-    fogShader.setVec3("fogBox.values[0].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
-    fogShader.setVec3("fogBox.values[0].sigma_a", glm::vec3(0.5f));
-    fogShader.setVec3("fogBox.values[1].sigma_s", glm::vec3(0.0f, 1.0f, 0.0f));
-    fogShader.setVec3("fogBox.values[1].sigma_a", glm::vec3(0.5f));
+    if (false) {
+        glm::vec3 min(-1, -1, -1);
+        glm::vec3 max(1, 1, 1);
+        glm::vec3 num(2, 2, 2);
 
-    fogShader.setVec3("fogBox.values[2].sigma_s", glm::vec3(1.0f, 0.0f, 1.0f));
-    fogShader.setVec3("fogBox.values[2].sigma_a", glm::vec3(0.5f));
-    fogShader.setVec3("fogBox.values[3].sigma_s", glm::vec3(0.0f, 1.0f, 1.0f));
-    fogShader.setVec3("fogBox.values[3].sigma_a", glm::vec3(0.5f));
+        fogShader.use();
+        fogShader.setVec3("fogBox.min", min);
+        fogShader.setVec3("fogBox.max", max);
+        fogShader.setVec3("fogBox.num", num);
+        fogShader.setVec3("fogBox.step", glm::abs(max - min) / num);
+        fogShader.setVec3("fogBox.values[0].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
+        fogShader.setVec3("fogBox.values[0].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[1].sigma_s", glm::vec3(0.0f, 1.0f, 0.0f));
+        fogShader.setVec3("fogBox.values[1].sigma_a", glm::vec3(0.5f));
 
-    fogShader.setVec3("fogBox.values[4].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
-    fogShader.setVec3("fogBox.values[4].sigma_a", glm::vec3(0.5f));
-    fogShader.setVec3("fogBox.values[5].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
-    fogShader.setVec3("fogBox.values[5].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[2].sigma_s", glm::vec3(1.0f, 0.0f, 1.0f));
+        fogShader.setVec3("fogBox.values[2].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[3].sigma_s", glm::vec3(0.0f, 1.0f, 1.0f));
+        fogShader.setVec3("fogBox.values[3].sigma_a", glm::vec3(0.5f));
 
-    fogShader.setVec3("fogBox.values[6].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
-    fogShader.setVec3("fogBox.values[6].sigma_a", glm::vec3(0.5f));
-    fogShader.setVec3("fogBox.values[7].sigma_s", glm::vec3(0.0f, 0.0f, 1.0f));
-    fogShader.setVec3("fogBox.values[7].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[4].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
+        fogShader.setVec3("fogBox.values[4].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[5].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
+        fogShader.setVec3("fogBox.values[5].sigma_a", glm::vec3(0.5f));
 
+        fogShader.setVec3("fogBox.values[6].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
+        fogShader.setVec3("fogBox.values[6].sigma_a", glm::vec3(0.5f));
+        fogShader.setVec3("fogBox.values[7].sigma_s", glm::vec3(0.0f, 0.0f, 1.0f));
+        fogShader.setVec3("fogBox.values[7].sigma_a", glm::vec3(0.5f));
+    }
    
-
+    FogGrid fogBox = FogGrid("./res/simpleFog.txt");
+    fogBox.assignUniform(fogShader);
     // render loop
     // -----------
+
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic

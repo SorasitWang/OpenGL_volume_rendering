@@ -147,10 +147,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\camera.h" />
+    <ClInclude Include="header\fogGrid.h" />
     <ClInclude Include="header\mesh.h" />
     <ClInclude Include="header\model.h" />
     <ClInclude Include="header\shader_m.h" />
     <ClInclude Include="header\stb_image.h" />
+    <ClInclude Include="header\util.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\fog.fs" />
