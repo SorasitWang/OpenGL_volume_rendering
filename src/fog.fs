@@ -6,6 +6,7 @@ struct FogParams {
 	
 	vec3 sigma_a;
 	vec3 sigma_s;
+
 } ;
 struct Plane {
 	vec3 point;
@@ -23,7 +24,7 @@ struct AABB {
 struct FogVexel {
 	vec3 sigma_a;
 	vec3 sigma_s;
-	vec3 density;
+	float density;
 	AABB box;
 };
 struct Fog {
@@ -42,7 +43,7 @@ out vec4 FragColor;
 in vec4 ioEyeSpacePosition;
 in vec4 pos;
 FogParams fog;
-
+// By experiment
 float Epsilon = 1e-5;
 // https://github.com/BSVino/MathForGameDevelopers/blob/line-box-intersection/math/collision.cpp
 
@@ -89,17 +90,22 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 {
 	// extract box to 6 planes, find 2(+) planes that intersect with the line then find distance between them
 	
-	if (insideAABB(v0,box) && insideAABB(v1,box))
+	// if both start and end of line are inside, cal distance between them.
+
+	bool v0Inside = insideAABB(v0,box);
+	bool v1Inside =insideAABB(v1,box) ;
+	if (v0Inside && v1Inside)
 		return distance(v0,v1);
 
-	vec3 oneInside;
-	int intersect = 1;
-	if (insideAABB(v0,box))
-		oneInside = v0;
-	else if (insideAABB(v1,box))
-		oneInside = v1;
+	vec3 whichInside;
+	int intersectCount = 1;
+	if (v0Inside){
+		whichInside = v0;
+	}
+	else if (v1Inside)
+		whichInside = v1;
 	else
-		intersect = 2;
+		intersectCount = 2;
 
 
 
@@ -132,19 +138,29 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 	}
 	// Case of intersect 3 planes?
 
-	if (reCount < intersect){
+
+	// Either intersect 2 points or not intersects.
+	if (reCount < intersectCount){
 		isIntersect = false;
 		return 0;
 	}
+	
 
 	isIntersect = true;
-	if (intersect == 1)
-		return distance(oneInside,results[0]);
+	if (reCount == 2){
+		if (intersectCount == 1)
+			return distance(whichInside,results[0]);
 	
-	return distance(results[0],results[1]);
+		return distance(results[0],results[1]);
+	}
+	else {
+		// Handle only case intersect 3 planes is enough (line in border)
+		// 2 of 3 intersect point may be too close, affect the distance
+		return max(max(distance(results[0],results[1]),distance(results[0],results[2])),distance(results[1],results[2]));
+	}
 }
 
-vec3 getFogFactor(FogParams params, float fogCoordinate)
+vec3 getFogFactor(FogVexel params, float fogCoordinate)
 {
 	
 	//if (fogCoordinate > 10000)
@@ -156,7 +172,7 @@ vec3 getFogFactor(FogParams params, float fogCoordinate)
 	return result;
 }
 
-float getFogFactor1(FogParams params, float fogCoordinate)
+float getFogFactor1(FogVexel params, float fogCoordinate)
 {
 	
 
@@ -201,7 +217,7 @@ void main()
 				if (isIntersect){
 				//if (fogGrid.g==0){
 
-					vec3 factor =getFogFactor(fog, distance);
+					vec3 factor = thisFog.density*getFogFactor(thisFog, distance);
 					
 					FragColor.r = mix(FragColor.r, thisFog.sigma_s.r, factor.r);
 					FragColor.g = mix(FragColor.g, thisFog.sigma_s.g, factor.g);

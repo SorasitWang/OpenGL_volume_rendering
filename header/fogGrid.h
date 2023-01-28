@@ -15,6 +15,7 @@ struct FogParams
 {
 	glm::vec3 sigma_a;
 	glm::vec3 sigma_s;
+    float density;
 };
 
 class FogGrid 
@@ -44,15 +45,26 @@ public:
                         tmpFog.sigma_a = glm::vec3(stof(lineExtracted[1]), stof(lineExtracted[2]), stof(lineExtracted[3]));
                         foundA = true;
                     }
-                    else { // s
+                    else if (lineExtracted[0] == "s") { // s
                         tmpFog.sigma_s = glm::vec3(stof(lineExtracted[1]), stof(lineExtracted[2]), stof(lineExtracted[3]));
                         foundS = true;
                     }
-                    if (foundA && foundS) {
+                    else if (lineExtracted[0] == "d") {
+                        if (lineExtracted.size() == 2)
+                            tmpFog.density = stof(lineExtracted[1]);
+                        else
+                            tmpFog.density = 1.0f;
+                        if (!foundA) tmpFog.sigma_a = this->params[0].sigma_a;
+                        if (!foundS) tmpFog.sigma_s = this->params[0].sigma_s;
+                        foundA = true;
+                        foundS = true;
                         this->params.push_back(tmpFog);
                         foundA = false;
                         foundS = false;
+                        
                     }
+
+                  
                 }
                 else if (lineExtracted[0] == "max") {
                     this->max = glm::vec3(stof(lineExtracted[1]), stof(lineExtracted[2]), stof(lineExtracted[3]));
@@ -84,6 +96,8 @@ public:
                 FogParams tmp = this->params[i];
                 shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_s", tmp.sigma_s);
                 shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_a", tmp.sigma_a);
+                shader.setFloat("fogBox.values[" + std::to_string(i) + "].density", tmp.density);
+                cout << tmp.density <<endl;
             }
         }
 
