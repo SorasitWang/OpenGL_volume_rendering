@@ -97,7 +97,7 @@ public:
                 shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_s", tmp.sigma_s);
                 shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_a", tmp.sigma_a);
                 shader.setFloat("fogBox.values[" + std::to_string(i) + "].density", tmp.density);
-                cout << tmp.density <<endl;
+               
             }
         }
 

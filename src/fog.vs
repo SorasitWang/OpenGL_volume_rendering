@@ -7,6 +7,7 @@ uniform mat4 model;
 //uniform mat4 view;
 out vec4 ioEyeSpacePosition;
 out vec4 pos;
+out vec2 texCoord;
 
 layout (std140) uniform Matrices
 {
@@ -22,5 +23,6 @@ void main()
     pos = model * vec4(aPos, 1.0);
     ioEyeSpacePosition = mvMatrix * vec4(aPos, 1.0);
     gl_ClipDistance[0] = dot(pos,clippingPlane);
+    texCoord = aText;
 
 } 

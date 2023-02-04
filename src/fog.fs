@@ -2,12 +2,6 @@
 #version 330 core
 
 
-struct FogParams {
-	
-	vec3 sigma_a;
-	vec3 sigma_s;
-
-} ;
 struct Plane {
 	vec3 point;
 	vec3 normal;
@@ -37,20 +31,17 @@ struct Fog {
 
 uniform vec3 viewPos; 
 uniform Fog fogBox;
-
+uniform sampler2D texture1;
 out vec4 FragColor;
 
 in vec4 ioEyeSpacePosition;
 in vec4 pos;
-FogParams fog;
+in vec2 texCoord;
 // By experiment
 float Epsilon = 1e-5;
-// https://github.com/BSVino/MathForGameDevelopers/blob/line-box-intersection/math/collision.cpp
-
 
 bool insideAABB(vec3 vecPoint,AABB box)
 {
-
 	 if(vecPoint.x > box.min.x-Epsilon && vecPoint.x < box.max.x+Epsilon &&
 		vecPoint.y > box.min.y-Epsilon && vecPoint.y < box.max.y+Epsilon &&
 		vecPoint.z > box.min.z-Epsilon && vecPoint.z < box.max.z+Epsilon)
@@ -78,18 +69,15 @@ bool planeIntersectLine(Plane plane,vec3 p0,vec3 p1,inout vec3 result)
 			u = u * fac;
 			//result = vec3(1);
 			result =p0 +  u;
-			
 			return true;
 		}
 	}
-
     // The segment is parallel to plane.
     return false;
 }
 float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 {
 	// extract box to 6 planes, find 2(+) planes that intersect with the line then find distance between them
-	
 	// if both start and end of line are inside, cal distance between them.
 
 	bool v0Inside = insideAABB(v0,box);
@@ -107,9 +95,7 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 	else
 		intersectCount = 2;
 
-
-
-	// make 6 planes
+	// make 6 planes from AABB
 	vec3 range = (box.max-box.min)/2;
 	int c=0;
 	for (int i=-1;i<2;i+=2){
@@ -125,7 +111,6 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 		box.planes[c++].normal = vec3(0,0,i);
 	}
 
-	
 	vec3 results[5];
 	int reCount = 0;
 	vec3 tmp ;
@@ -138,19 +123,16 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 	}
 	// Case of intersect 3 planes?
 
-
 	// Either intersect 2 points or not intersects.
 	if (reCount < intersectCount){
 		isIntersect = false;
 		return 0;
 	}
 	
-
 	isIntersect = true;
 	if (reCount == 2){
 		if (intersectCount == 1)
 			return distance(whichInside,results[0]);
-	
 		return distance(results[0],results[1]);
 	}
 	else {
@@ -163,30 +145,19 @@ float lineAABBIntersectDistance(AABB box,vec3 v0,vec3 v1,inout bool isIntersect)
 vec3 getFogFactor(FogVexel params, float fogCoordinate)
 {
 	
-	//if (fogCoordinate > 10000)
-		//fogCoordinate = 10000;
-	vec3 result = vec3(exp(-fogCoordinate*params.sigma_a.r),exp(-fogCoordinate*params.sigma_a.g),exp(-fogCoordinate*params.sigma_a.b));
+	vec3 result = vec3(exp(-fogCoordinate*params.sigma_a.r),
+						exp(-fogCoordinate*params.sigma_a.g),
+						exp(-fogCoordinate*params.sigma_a.b));
 
 	
 	result = vec3(1) - clamp(result, 0.0, 1.0);
 	return result;
 }
 
-float getFogFactor1(FogVexel params, float fogCoordinate)
-{
-	
-
-	float result = exp(-fogCoordinate*params.sigma_a.r);
-	
-	
-	result = 1 - clamp(result, 0.0, 1.0);
-	return result;
-}
 void main()
 {
-	fog.sigma_s = vec3(1,0,0);
-	fog.sigma_a = vec3(0.3,0.1,0.1);
-    FragColor = vec4(1); // set all 4 vector values to 1.0
+	
+    FragColor = vec4(texture(texture1, texCoord).rgb,1);
 	
 	float stepX2 = fogBox.step.x/2;
 	float stepY2 = fogBox.step.y/2;
@@ -208,30 +179,19 @@ void main()
 				box.max = vec3(center.x+stepX2,center.y+stepY2,center.z+stepZ2);
 				box.center = center;
 				
-				//box.min = vec3(-1,-1,-1);
-				//box.max = vec3(1,1,1);
-				//box.center = vec3(0,0,0);
-				
 				distance = lineAABBIntersectDistance(box, viewPos, pos.xyz,isIntersect);
-				//FragColor = vec4(viewPos,1);
 				if (isIntersect){
-				//if (fogGrid.g==0){
-
 					vec3 factor = thisFog.density*getFogFactor(thisFog, distance);
 					
 					FragColor.r = mix(FragColor.r, thisFog.sigma_s.r, factor.r);
 					FragColor.g = mix(FragColor.g, thisFog.sigma_s.g, factor.g);
 					FragColor.b = mix(FragColor.b, thisFog.sigma_s.b, factor.b);
 
-					//FragColor.rgb = thisFog.sigma_s;
-					//if (distance==0)
-					//FragColor = vec4(1,0,0,0);
 				}
 
 			}
 		}
 	}
-    //float fogCoordinate = abs(ioEyeSpacePosition.z / ioEyeSpacePosition.w);
 
 
 	

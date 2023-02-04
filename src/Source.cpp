@@ -101,6 +101,10 @@ int main()
 
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 
+    unsigned int wallText = loadTexture("./res/textures/wall.jpg",true);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, wallText);
+    fogShader.setInt("texture1", wallText);
     if (false) {
         glm::vec3 min(-1, -1, -1);
         glm::vec3 max(1, 1, 1);
@@ -132,7 +136,7 @@ int main()
         fogShader.setVec3("fogBox.values[7].sigma_a", glm::vec3(0.5f));
     }
    
-    FogGrid fogBox = FogGrid("./res/simpleFog.txt");
+    FogGrid fogBox = FogGrid("./res/fog/simpleFog.txt");
     fogBox.assignUniform(fogShader);
     // render loop
     // -----------
