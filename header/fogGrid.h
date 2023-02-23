@@ -27,6 +27,8 @@ public:
     glm::vec3 step;
     glm::vec3 num;
     vector<FogParams> params;
+
+    ~FogGrid() {};
     FogGrid(string fileName) {
         fstream newfile;
         vector<string> lineExtracted;
@@ -52,7 +54,7 @@ public:
                     else if (lineExtracted[0] == "d") {
                         if (lineExtracted.size() == 2)
                             tmpFog.density = stof(lineExtracted[1]);
-                        else
+                        else 
                             tmpFog.density = 1.0f;
                         if (!foundA) tmpFog.sigma_a = this->params[0].sigma_a;
                         if (!foundS) tmpFog.sigma_s = this->params[0].sigma_s;
@@ -61,10 +63,7 @@ public:
                         this->params.push_back(tmpFog);
                         foundA = false;
                         foundS = false;
-                        
                     }
-
-                  
                 }
                 else if (lineExtracted[0] == "max") {
                     this->max = glm::vec3(stof(lineExtracted[1]), stof(lineExtracted[2]), stof(lineExtracted[3]));
@@ -85,21 +84,20 @@ public:
         }
     }
 
-        void assignUniform(Shader shader) {
-            // shader must have fogBox and required struct
-            shader.use();
-            shader.setVec3("fogBox.min", this->min);
-            shader.setVec3("fogBox.max", this->max);
-            shader.setVec3("fogBox.num", this->num);
-            shader.setVec3("fogBox.step", this->step);
-            for (unsigned int i = 0; i < this->params.size();i++) {
-                FogParams tmp = this->params[i];
-                shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_s", tmp.sigma_s);
-                shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_a", tmp.sigma_a);
-                shader.setFloat("fogBox.values[" + std::to_string(i) + "].density", tmp.density);
-               
-            }
+    void assignUniform(Shader shader) {
+        // shader must have fogBox and required struct
+        shader.use();
+        shader.setVec3("fogBox.min", this->min);
+        shader.setVec3("fogBox.max", this->max);
+        shader.setVec3("fogBox.num", this->num);
+        shader.setVec3("fogBox.step", this->step);
+        for (unsigned int i = 0; i < this->params.size();i++) {
+            FogParams tmp = this->params[i];
+            shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_s", tmp.sigma_s);
+            shader.setVec3("fogBox.values[" + std::to_string(i) + "].sigma_a", tmp.sigma_a);
+            shader.setFloat("fogBox.values[" + std::to_string(i) + "].density", tmp.density);               
         }
+    }
 
 private :
     string delimiter = " ";

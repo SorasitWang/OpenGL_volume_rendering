@@ -26,7 +26,7 @@ struct Fog {
 	vec3 max;
 	vec3 num;
 	vec3 step;
-	FogVexel values[100];
+	FogVexel values[220];
 };
 
 uniform vec3 viewPos; 
@@ -172,8 +172,9 @@ void main()
 			{
 				float offsetZ = k*fogBox.step.z;
 				FogVexel thisFog;
-				thisFog = fogBox.values[int(i+(fogBox.num.x*j)+(fogBox.num.x+fogBox.num.y)*k)];
+				thisFog = fogBox.values[int(i+(fogBox.num.x*j)+(fogBox.num.x*fogBox.num.y)*k)];
 				vec3 center = fogBox.min + vec3(stepX2+offsetX,stepY2+offsetY,stepZ2+offsetZ);
+				
 				AABB box ;
 				box.min = vec3(center.x-stepX2,center.y-stepY2,center.z-stepZ2);
 				box.max = vec3(center.x+stepX2,center.y+stepY2,center.z+stepZ2);

@@ -53,4 +53,15 @@
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\fog\simpleFog.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="res\fog\simpleFog1.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="res\fog\sphere.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
 </Project>

@@ -8,7 +8,7 @@
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
 
-
+#include <fstream>
 #include "../header/shader_m.h"
 #include "../header/camera.h"
 #include "../header/model.h"
@@ -19,17 +19,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-unsigned int loadTexture(const char* path, bool gammaCorrection);
-void renderQuad();
-void renderCube();
-std::vector<float> filterCreation(const int size);
+void genSphereVolume();
+
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-bool bloom = true;
-bool bloomKeyPressed = false;
-float exposure = 1.0f;
+
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
@@ -101,46 +97,17 @@ int main()
 
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 
-    unsigned int wallText = loadTexture("./res/textures/wall.jpg",true);
+    unsigned int wallText = Util::loadTexture("./res/textures/wall.jpg",true);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, wallText);
     fogShader.setInt("texture1", wallText);
-    if (false) {
-        glm::vec3 min(-1, -1, -1);
-        glm::vec3 max(1, 1, 1);
-        glm::vec3 num(2, 2, 2);
-
-        fogShader.use();
-        fogShader.setVec3("fogBox.min", min);
-        fogShader.setVec3("fogBox.max", max);
-        fogShader.setVec3("fogBox.num", num);
-        fogShader.setVec3("fogBox.step", glm::abs(max - min) / num);
-        fogShader.setVec3("fogBox.values[0].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
-        fogShader.setVec3("fogBox.values[0].sigma_a", glm::vec3(0.5f));
-        fogShader.setVec3("fogBox.values[1].sigma_s", glm::vec3(0.0f, 1.0f, 0.0f));
-        fogShader.setVec3("fogBox.values[1].sigma_a", glm::vec3(0.5f));
-
-        fogShader.setVec3("fogBox.values[2].sigma_s", glm::vec3(1.0f, 0.0f, 1.0f));
-        fogShader.setVec3("fogBox.values[2].sigma_a", glm::vec3(0.5f));
-        fogShader.setVec3("fogBox.values[3].sigma_s", glm::vec3(0.0f, 1.0f, 1.0f));
-        fogShader.setVec3("fogBox.values[3].sigma_a", glm::vec3(0.5f));
-
-        fogShader.setVec3("fogBox.values[4].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
-        fogShader.setVec3("fogBox.values[4].sigma_a", glm::vec3(0.5f));
-        fogShader.setVec3("fogBox.values[5].sigma_s", glm::vec3(1.0f, 1.0f, 0.0f));
-        fogShader.setVec3("fogBox.values[5].sigma_a", glm::vec3(0.5f));
-
-        fogShader.setVec3("fogBox.values[6].sigma_s", glm::vec3(1.0f, 0.0f, 0.0f));
-        fogShader.setVec3("fogBox.values[6].sigma_a", glm::vec3(0.5f));
-        fogShader.setVec3("fogBox.values[7].sigma_s", glm::vec3(0.0f, 0.0f, 1.0f));
-        fogShader.setVec3("fogBox.values[7].sigma_a", glm::vec3(0.5f));
-    }
-   
-    FogGrid fogBox = FogGrid("./res/fog/simpleFog.txt");
+    genSphereVolume();
+    FogGrid fogBox = FogGrid("./res/fog/sphere.txt");
     fogBox.assignUniform(fogShader);
     // render loop
     // -----------
-
+    unsigned int cubeVAO = 0, cubeVBO = 0;
+    
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -169,126 +136,17 @@ int main()
         fogShader.setVec3("viewPos", camera.Position);
         glm::mat4 model = glm::mat4(1.0f);
         //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0,1,0));
-        model = glm::scale(model, glm::vec3(5, 5, 5));
+        model = glm::scale(model, glm::vec3(20, 20, 20));
         fogShader.setMat4("model", model);
-        renderCube();
+        Util::renderCube(cubeVAO, cubeVBO);
 
-        //renderQuad();
-       
-
-      
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteBuffers(1, &cubeVBO);
     glfwTerminate();
     return 0;
-}
-
-// renderCube() renders a 1x1 3D cube in NDC.
-// -------------------------------------------------
-unsigned int cubeVAO = 0;
-unsigned int cubeVBO = 0;
-void renderCube()
-{
-    // initialize (if necessary)
-    if (cubeVAO == 0)
-    {
-        float vertices[] = {
-            // back face
-            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-             1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
-             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-            -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
-            // front face
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-             1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-            -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-            // left face
-            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-            -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
-            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-            -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-            // right face
-             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-             1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
-             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-             1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
-            // bottom face
-            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-             1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
-             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-            -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-            // top face
-            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-             1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-             1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
-             1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-            -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
-        };
-        glGenVertexArrays(1, &cubeVAO);
-        glGenBuffers(1, &cubeVBO);
-        // fill buffer
-        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        // link vertex attributes
-        glBindVertexArray(cubeVAO);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
-    // render Cube
-    glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-}
-
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
-void renderQuad()
-{
-    if (quadVAO == 0)
-    {
-        float quadVertices[] = {
-            // positions        // texture Coords
-            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-        };
-        // setup plane VAO
-        glGenVertexArrays(1, &quadVAO);
-        glGenBuffers(1, &quadVBO);
-        glBindVertexArray(quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    }
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -307,27 +165,7 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !bloomKeyPressed)
-    {
-        bloom = !bloom;
-        bloomKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
-    {
-        bloomKeyPressed = false;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-    {
-        if (exposure > 0.0f)
-            exposure -= 0.001f;
-        else
-            exposure = 0.0f;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-    {
-        exposure += 0.001f;
-    }
+   
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -368,85 +206,42 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-// utility function for loading a 2D texture from file
-// ---------------------------------------------------
-unsigned int loadTexture(char const* path, bool gammaCorrection)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
 
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data)
-    {
-        GLenum internalFormat;
-        GLenum dataFormat;
-        if (nrComponents == 1)
-        {
-            internalFormat = dataFormat = GL_RED;
+void genSphereVolume() {
+    float radius = 1.f;
+    glm::vec3 min(-radius),max(radius),num(6,6,6),sphereCenter = (min+max)/2.0f;
+    glm::vec3 s(0.5f), a(0.8f);
+    glm::vec3 step = (max - min) / num,step2 = step/2.0f;
+    float distance = 0;
+    vector<float> density(num.x*num.y*num.z);
+    bool isIntersect = true;
+    for (int i = 0; i < num.x; i++) {
+        float offsetX = i * step.x;
+        for (int j = 0; j < num.y; j++) {
+            float offsetY = j * step.y;
+            for (int k = 0; k < num.z; k++) {
+                float offsetZ = k * step.z;
+                glm::vec3 center = min + glm::vec3(step2.x + offsetX, step2.y + offsetY, step.z + offsetZ);
+                if (glm::length(center) <= radius) {
+                    density[i + num.x * j + (num.x * num.y) * k] = 1.0f;
+                }
+            }
         }
-        else if (nrComponents == 3)
-        {
-            internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
-            dataFormat = GL_RGB;
+    }
+    ofstream myfile("./res/fog/sphere.txt");
+    if (myfile.is_open()){
+        myfile << "min " + to_string(min.x) + " "  +to_string(min.y) + " " + to_string(min.z)<< "\n";
+        myfile << "max " + to_string(max.x) + " "  +to_string(max.y) + " " + to_string(max.z) << "\n";
+        myfile << "num " + to_string(num.x) + " "  +to_string(num.y) + " " + to_string(num.z) << "\n";
+
+        myfile << "s " + to_string(s.x) + " " + to_string(s.y) + " " + to_string(s.z) << "\n";
+        myfile << "a " + to_string(a.x) + " " + to_string(a.y) + " " + to_string(a.z) << "\n";
+        for (unsigned int i = 0; i < density.size(); i++) {
+            myfile << "d " + to_string(density[i]) << "\n";
         }
-        else if (nrComponents == 4)
-        {
-            internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
-            dataFormat = GL_RGBA;
-        }
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
+        myfile.close();
     }
-    else
-    {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-    }
+    else cout << "Unable to open file";
 
-    return textureID;
-}
-# define M_PI           3.14159265358979323846  /* pi */
-// Function to create Gaussian filter
-#define sigma 1.0
-#define sigmaPow2 sigma*sigma
-#define K  1
-std::vector<float> filterCreation(const int size)
-{
-    auto IX = [&](int i, int j)
-    {
-        return i + j * size;
-    };
-    std::vector<float> kernel;
 
-    // initialising standard deviation to 1.0
-    double r, s = 2.0 * sigmaPow2;
-    int size2 = int(size / 2);
-
-    // sum is for normalization
-    double sum = 0.0;
-    for (int i = 0; i < size; ++i)
-    {
-        kernel.push_back(0.0f);
-    }
-    // generating 5x5 kernel
-    for (int i = 0; i < size; i++) {
-        float x = i - (size - 1) / 2;
-        kernel[i] = K * exp((pow(x, 2) / s) * (-1));
-        sum += kernel[i];
-    }
-
-    // normalising the Kernel
-    for (int i = 0; i < kernel.size(); i++)
-        kernel[i] /= sum;
-    return kernel;
 }
