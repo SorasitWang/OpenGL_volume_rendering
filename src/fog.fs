@@ -187,7 +187,6 @@ void main()
 					FragColor.r = mix(FragColor.r, thisFog.sigma_s.r, factor.r);
 					FragColor.g = mix(FragColor.g, thisFog.sigma_s.g, factor.g);
 					FragColor.b = mix(FragColor.b, thisFog.sigma_s.b, factor.b);
-
 				}
 
 			}

@@ -210,7 +210,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 void genSphereVolume() {
     float radius = 1.f;
     glm::vec3 min(-radius),max(radius),num(6,6,6),sphereCenter = (min+max)/2.0f;
-    glm::vec3 s(0.5f), a(0.8f);
+    glm::vec3 s(0.5f), a(0.9f);
     glm::vec3 step = (max - min) / num,step2 = step/2.0f;
     float distance = 0;
     vector<float> density(num.x*num.y*num.z);
