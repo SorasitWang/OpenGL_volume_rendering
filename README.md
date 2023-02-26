@@ -32,3 +32,11 @@ Simple box-volume rendering
  ```
  
  ![box_volume_rendering](https://user-images.githubusercontent.com/60053627/220272468-59c1b455-f01e-4e07-8626-ff1007f43442.png)
+
+ ![sphere_volume_rendering](https://user-images.githubusercontent.com/60053627/220833273-60d53d1f-3fbc-45a3-94c8-8470d4faec31.png)
+ 
+ *Sphere in low-resolution (for the sake of performance)*
+ 
+## Further Improvement
+- Fix problem with "out of resource error" in glsl.
+- Improve performance.
